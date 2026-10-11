@@ -1,0 +1,1404 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Helldivers 2 Loadout Roulette</title>
+<meta name="description" content="A fan-made randomizer for Helldivers 2. Spin the wheel to pick your primary, secondary, grenade, booster and four stratagems.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;800&family=Public+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #e3e6ea;
+    --panel: #f3f4f6;
+    --panel2: #d9dee5;
+    --ink: #13202f;
+    --muted: #4d5e74;
+    --line: #aeb8c5;
+    --accent: #ffe710;
+    --accent-ink: #13202f;
+    --alert: #c9372b;
+    --rim: #13202f;
+    --seg1: #ffe710;  --seg1-ink: #13202f;
+    --seg2: #8ea6c6;  --seg2-ink: #10202f;
+    --seg3: #d2dae6;  --seg3-ink: #10202f;
+    --f-display: "Big Shoulders Display", "Arial Narrow", Impact, sans-serif;
+    --f-body: "Public Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    color-scheme: light;
+
+    box-sizing: border-box;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0e1827;
+      --panel: #15253b;
+      --panel2: #1c3252;
+      --ink: #eaf0f7;
+      --muted: #9db0c8;
+      --line: #2b4468;
+      --accent-ink: #0e1827;
+      --alert: #ef5a48;
+      --rim: #070e19;
+      --seg1-ink: #0e1827;
+      --seg2: #2f5384;  --seg2-ink: #ffffff;
+      --seg3: #1c3354;  --seg3-ink: #eaf0f7;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0e1827;
+    --panel: #15253b;
+    --panel2: #1c3252;
+    --ink: #eaf0f7;
+    --muted: #9db0c8;
+    --line: #2b4468;
+    --accent-ink: #0e1827;
+    --alert: #ef5a48;
+    --rim: #070e19;
+    --seg1-ink: #0e1827;
+    --seg2: #2f5384;  --seg2-ink: #ffffff;
+    --seg3: #1c3354;  --seg3-ink: #eaf0f7;
+    color-scheme: dark;
+  }
+
+  *, *::before, *::after { box-sizing: inherit; }
+  html { scroll-padding-top: env(safe-area-inset-top, 0px); }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--f-body);
+    font-size: 16px;
+    line-height: 1.45;
+    -webkit-font-smoothing: antialiased;
+  }
+  button { font: inherit; color: inherit; }
+  :focus-visible { outline: 3px solid var(--ink); outline-offset: 2px; }
+  .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+  .stripe {
+    height: 10px;
+    background: repeating-linear-gradient(-45deg, var(--accent) 0 14px, var(--rim) 14px 28px);
+  }
+
+  .top {
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 22px 20px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 16px;
+  }
+  h1 {
+    margin: 0;
+    font-family: var(--f-display);
+    font-weight: 800;
+    font-size: clamp(2.6rem, 7vw, 4.4rem);
+    line-height: .9;
+    letter-spacing: .005em;
+    text-transform: uppercase;
+  }
+  .tag { margin: 8px 0 0; color: var(--muted); max-width: 52ch; }
+
+  .layout {
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 0 20px 48px;
+    display: grid;
+    grid-template-columns: minmax(0, 1.05fr) minmax(0, .95fr);
+    gap: clamp(24px, 4vw, 48px);
+    align-items: start;
+  }
+  @media (max-width: 900px) { .layout { grid-template-columns: minmax(0, 1fr); } }
+  @media (min-width: 901px) { .wheel-col { position: sticky; top: 14px; } }
+
+  /* ---------- wheel ---------- */
+  .wheel-wrap {
+    position: relative;
+    width: min(100%, 560px, max(300px, calc(100vh - 340px)));
+    aspect-ratio: 1;
+    margin: 0 auto;
+  }
+  #wheel { display: block; width: 100%; height: 100%; }
+  .pointer {
+    position: absolute;
+    top: -8px; left: 50%;
+    width: 38px; height: 48px;
+    transform: translateX(-50%);
+    transform-origin: 50% 20%;
+    filter: drop-shadow(0 2px 2px rgba(0,0,0,.35));
+    pointer-events: none;
+  }
+  .pointer path { fill: var(--alert); stroke: var(--rim); stroke-width: 2; stroke-linejoin: round; }
+
+  .readout {
+    margin-top: 18px;
+    padding: 12px 18px 14px;
+    background: var(--panel);
+    border-left: 6px solid var(--accent);
+    box-shadow: inset 0 0 0 2px var(--rim);
+  }
+  .r-label { margin: 0; font-size: .85rem; font-weight: 600; color: var(--muted); }
+  .r-name {
+    margin: 2px 0 0;
+    font-family: var(--f-display);
+    font-weight: 800;
+    font-size: clamp(1.9rem, 4.6vw, 2.7rem);
+    line-height: 1.02;
+    min-height: 2.04em;
+    overflow-wrap: anywhere;
+  }
+  .r-note { margin: 4px 0 0; font-size: .88rem; color: var(--muted); min-height: 1.3em; }
+
+  .actions { display: grid; grid-template-columns: 1.4fr 1fr; gap: 10px; margin-top: 14px; }
+  @media (max-width: 520px) { .actions { grid-template-columns: 1fr; } }
+  .btn {
+    font-family: var(--f-display);
+    font-weight: 800;
+    font-size: 1.45rem;
+    line-height: 1;
+    padding: .8rem 1rem;
+    border: 2px solid var(--ink);
+    background: transparent;
+    border-radius: 3px;
+    cursor: pointer;
+    transition: transform .08s ease, background .12s ease;
+  }
+  .btn:hover:not(:disabled) { transform: translateY(-1px); }
+  .btn:active:not(:disabled) { transform: translateY(1px); }
+  .btn:disabled { opacity: .5; cursor: not-allowed; }
+  .btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--rim); }
+
+  /* ---------- loadout ---------- */
+  .lo-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+  h2, h3 { font-family: var(--f-display); font-weight: 800; margin: 0; line-height: 1; }
+  h2 { font-size: 2rem; }
+  h3 { font-size: 1.4rem; }
+  .block { margin-bottom: 26px; }
+  .block > h3 { margin-bottom: 10px; }
+
+  .mini {
+    font-size: .82rem;
+    font-weight: 600;
+    padding: .38rem .7rem;
+    border: 1.5px solid var(--line);
+    background: transparent;
+    border-radius: 3px;
+    cursor: pointer;
+  }
+  .mini:hover:not(:disabled) { border-color: var(--ink); }
+  .mini:disabled { opacity: .45; cursor: not-allowed; }
+  .mini[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); border-color: var(--rim); }
+
+  .slots { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+  .slot {
+    position: relative;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 8px 12px;
+    align-items: center;
+    padding: 10px 12px;
+    background: var(--panel);
+    border: 2px solid var(--line);
+    border-left: 6px solid var(--line);
+  }
+  .slot[data-current="true"] { border-color: var(--ink); border-left-color: var(--accent); background: var(--panel2); }
+  .slot-main { all: unset; box-sizing: border-box; display: block; cursor: pointer; min-width: 0; padding: 2px 0; }
+  .slot-main:focus-visible { outline: 3px solid var(--ink); outline-offset: 4px; }
+  .slot-label { display: block; font-size: .8rem; font-weight: 600; color: var(--muted); }
+  .slot-pick { display: block; font-size: 1.08rem; font-weight: 700; overflow-wrap: anywhere; }
+  .slot-pick.empty { font-weight: 400; color: var(--muted); }
+  .slot-actions { display: flex; gap: 6px; }
+
+  .pool { grid-column: 1 / -1; position: relative; }
+  .pool-btn {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    text-align: left;
+    padding: .45rem .65rem;
+    border: 1.5px dashed var(--line);
+    background: transparent;
+    border-radius: 3px;
+    cursor: pointer;
+    font-size: .88rem;
+  }
+  .pool-btn:hover { border-color: var(--ink); }
+  .pool-btn[aria-expanded="true"] { border-style: solid; border-color: var(--ink); }
+  .pool-k { color: var(--muted); }
+  .pool-v { flex: 1; font-weight: 600; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .pool-btn svg { flex: none; transition: transform .12s ease; }
+  .pool-btn[aria-expanded="true"] svg { transform: rotate(180deg); }
+
+  .panel {
+    position: absolute;
+    z-index: 30;
+    left: 0; right: 0;
+    top: calc(100% + 6px);
+    max-height: min(62vh, 480px);
+    overflow: auto;
+    background: var(--panel);
+    border: 2px solid var(--ink);
+    box-shadow: 0 14px 30px rgba(0,0,0,.35);
+    text-align: left;
+  }
+  .panel[hidden] { display: none; }
+  .panel-head {
+    position: sticky; top: 0; z-index: 1;
+    display: flex; justify-content: space-between; align-items: center; gap: 8px;
+    padding: 8px 10px;
+    background: var(--panel2);
+    border-bottom: 2px solid var(--ink);
+    font-size: .85rem; font-weight: 600;
+  }
+  .panel-head div { display: flex; gap: 6px; }
+  .node-row, .item-row {
+    display: flex; align-items: center; gap: 6px;
+    padding: 4px 10px 4px calc(10px + var(--d, 0) * 20px);
+  }
+  .node-row:hover, .item-row:hover { background: var(--panel2); }
+  .node-row label, .item-row label { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0; padding: 3px 0; cursor: pointer; }
+  .node-row label { font-weight: 700; }
+  .item-row label { font-size: .92rem; }
+  .node-row input, .item-row input { width: 17px; height: 17px; margin: 0; accent-color: var(--ink); flex: none; }
+  .chev { all: unset; box-sizing: border-box; width: 24px; height: 24px; display: grid; place-items: center; cursor: pointer; flex: none; border-radius: 3px; }
+  .chev:hover { background: var(--line); }
+  .chev:focus-visible { outline: 3px solid var(--ink); }
+  .chev svg { transition: transform .12s ease; }
+  .chev[aria-expanded="true"] svg { transform: rotate(90deg); }
+  .chev-spacer { width: 24px; flex: none; }
+  .count { font-size: .78rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .chip { font-size: .7rem; padding: 1px 6px; border: 1px solid var(--line); border-radius: 3px; color: var(--muted); white-space: nowrap; }
+  .children[hidden] { display: none; }
+
+  .strat-head { position: relative; margin-bottom: 10px; }
+
+  [hidden] { display: none !important; }
+  .squad-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; margin-bottom: 14px; }
+  .squad-bar .lbl { font-size: .85rem; font-weight: 600; color: var(--muted); }
+  .seg { display: inline-flex; flex-wrap: wrap; border: 2px solid var(--ink); border-radius: 3px; overflow: hidden; }
+  .seg button { all: unset; box-sizing: border-box; cursor: pointer; padding: .38rem .85rem; font-weight: 600; font-size: .88rem; border-right: 1px solid var(--line); }
+  .seg button:last-child { border-right: 0; }
+  .seg button:hover:not(:disabled) { background: var(--panel2); }
+  .seg button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); }
+  .seg button:focus-visible { outline: 3px solid var(--ink); outline-offset: -3px; }
+  .seg button:disabled { opacity: .5; cursor: not-allowed; }
+  #diverTabs { margin-bottom: 14px; }
+  .opt { display: flex; align-items: center; gap: 8px; font-size: .88rem; cursor: pointer; }
+  .opt input { width: 17px; height: 17px; margin: 0; accent-color: var(--ink); }
+  .summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 10px; margin-bottom: 22px; }
+  .card { background: var(--panel); border: 2px solid var(--line); border-left: 6px solid var(--line); padding: 8px 10px 10px; min-width: 0; }
+  .card[data-active="true"] { border-color: var(--ink); border-left-color: var(--accent); background: var(--panel2); }
+  .card h4 { margin: 0 0 4px; font-family: var(--f-display); font-weight: 800; font-size: 1.25rem; line-height: 1; }
+  .card ul { list-style: none; margin: 0; padding: 0; font-size: .82rem; }
+  .card li { overflow-wrap: anywhere; padding: 1px 0; }
+  .card .k { color: var(--muted); }
+  .card .none { color: var(--muted); }
+  .actions #spinSquad, .actions #skip { grid-column: 1 / -1; }
+  .actions #skip { justify-self: start; }
+
+  .toast {
+    position: fixed;
+    left: 50%;
+    bottom: calc(22px + env(safe-area-inset-bottom, 0px));
+    transform: translate(-50%, 20px);
+    max-width: calc(100vw - 32px);
+    padding: .65rem 1rem;
+    background: var(--ink);
+    color: var(--bg);
+    font-weight: 600;
+    font-size: .92rem;
+    border-radius: 3px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .18s ease, transform .18s ease;
+    z-index: 60;
+  }
+  .toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+  footer { max-width: 1180px; margin: 0 auto; padding: 0 20px 36px; color: var(--muted); font-size: .82rem; }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { transition: none !important; }
+  }
+</style>
+</head>
+<body>
+<div class="stripe" aria-hidden="true"></div>
+
+<header class="top">
+  <div>
+    <h1>Loadout roulette</h1>
+    <p class="tag">Spin the wheel and let Super Earth decide what you drop with. Choose what can come up using the pool menus on each slot.</p>
+  </div>
+  <button id="sound" class="mini" type="button" aria-pressed="false">Sound off</button>
+</header>
+
+<main class="layout">
+  <section class="wheel-col" aria-label="Wheel">
+    <div class="wheel-wrap" id="wheelWrap">
+      <canvas id="wheel" aria-hidden="true"></canvas>
+      <svg class="pointer" id="pointer" viewBox="0 0 38 48" aria-hidden="true"><path d="M19 47 L3 9 Q19 -3 35 9 Z"/></svg>
+    </div>
+
+    <div class="readout">
+      <p class="r-label" id="rLabel"></p>
+      <p class="r-name" id="rName"></p>
+      <p class="r-note" id="rNote"></p>
+    </div>
+
+    <div class="actions">
+      <button id="spinOne" class="btn primary" type="button">Spin</button>
+      <button id="spinAll" class="btn" type="button">Spin full loadout</button>
+      <button id="spinSquad" class="btn primary" type="button" hidden>Spin whole squad</button>
+      <button id="skip" class="mini" type="button" hidden>Skip animation</button>
+    </div>
+  </section>
+
+  <section class="loadout-col" aria-label="Loadout">
+    <div class="lo-head">
+      <h2>Loadout</h2>
+      <button id="copy" class="mini" type="button">Copy loadout</button>
+    </div>
+
+    <div class="squad-bar">
+      <span class="lbl" id="squadLbl">Squad size</span>
+      <div class="seg" id="squadSeg" role="group" aria-labelledby="squadLbl"></div>
+      <label class="opt" id="uniqueOpt" hidden><input type="checkbox" id="unique"> Unique stratagems across the squad</label>
+    </div>
+    <div class="summary" id="summary" hidden></div>
+    <div class="seg" id="diverTabs" role="group" aria-label="Choose which diver to edit" hidden></div>
+
+    <div class="block">
+      <h3>Weapons and gear</h3>
+      <ol class="slots" id="gearSlots"></ol>
+    </div>
+
+    <div class="block">
+      <h3>Stratagems</h3>
+      <div class="strat-head" id="stratPoolHost"></div>
+      <ol class="slots" id="stratSlots"></ol>
+    </div>
+  </section>
+</main>
+
+<footer>Fan-made and not affiliated with Arrowhead Game Studios or Sony. Helldivers is a trademark of its respective owners.</footer>
+
+<div class="toast" id="toast" role="status"></div>
+<div class="sr-only" id="live" aria-live="polite"></div>
+
+<script>
+(function () {
+  "use strict";
+
+  /* ================================================================
+     ITEM DATA
+     Each category is a tree: groups can hold sub-groups or items.
+     An item is "Name" or ["Name", "short note"].
+     To add something new, drop it into the right group below.
+     ================================================================ */
+  var DATA = {
+    primary: { label: "Primary weapon", all: "All primary weapons", groups: [
+      { name: "Assault rifles", items: [
+        "AR-23 Liberator", "AR-23P Liberator Penetrator", "AR-23C Liberator Concussive", "AR-23A Liberator Carbine",
+        "BR-14 Adjudicator", "AR-61 Tenderizer", "StA-52 Assault Rifle", "AR-32 Pacifier", "MA5C Assault Rifle",
+        "AR-2 Coyote", "AR/GL-21 One-Two", "AR-59 Suppressor", "AR-11 Arbitrator" ] },
+      { name: "Marksman rifles", items: [
+        "R-63 Diligence", "R-63CS Diligence Counter Sniper", "R-2124 Constitution", "R-6 Deadeye",
+        "R-2 Amendment", "R-72 Censor", "R-4 Hyena" ] },
+      { name: "Submachine guns", items: [
+        "MP-98 Knight", "SMG-37 Defender", "SMG-72 Pummeler", "SMG-32 Reprimand", "StA-11 SMG",
+        "M7S SMG", "SMG/FLAM-34 Stoker", "SMG-203 Gallant" ] },
+      { name: "Shotguns", items: [
+        "SG-8 Punisher", "SG-225 Breaker", "SG-8S Slugger", "SG-225SP Breaker Spray&Pray", "SG-225IE Breaker Incendiary",
+        "SG-451 Cookout", "SG-20 Halt", "DBS-2 Double Freedom", "M90A Shotgun", "SG-97 Sweeper" ] },
+      { name: "Explosive", items: [ "R-36 Eruptor", "CB-9 Exploding Crossbow", "GL-15 Evictor" ] },
+      { name: "Energy-based", items: [
+        "LAS-5 Scythe", "PLAS-1 Scorcher", "LAS-16 Sickle", "SG-8P Punisher Plasma", "ARC-12 Blitzer",
+        "PLAS-101 Purifier", "PLAS-39 Accelerator Rifle", "LAS-17 Double-Edge Sickle", "LAS-13 Trident" ] },
+      { name: "Special", items: [
+        "R/40-K Hot-Shot Marksman Rifle", "LAS-12 Sai", "JAR-5 Dominator", "FLAM-66 Torcher", "VG-70 Variable" ] }
+    ] },
+
+    secondary: { label: "Secondary weapon", all: "All secondary weapons", groups: [
+      { name: "Pistols", items: [
+        "P-2 Peacemaker", "P-19 Redeemer", "P-4 Senator", "P-113 Verdict", "P-92 Warrant", "M6C/SOCOM Pistol", "P-69 Veto" ] },
+      { name: "Melee", items: [
+        "CQC-19 Stun Lance", "CQC-30 Stun Baton", "CQC-5 Combat Hatchet", "CQC-2 Saber", "CQC-42 Machete", "CQC-73 Entrenchment Tool" ] },
+      { name: "Special", items: [
+        "LAS-7 Dagger", "GP-31 Grenade Pistol", "SG-22 Bushwhacker", "P-72 Crisper", "P-11 Stim Pistol", "PLAS-15 Loyalist",
+        "GP-20 Ultimatum", "LAS-58 Talon", "P-35 Re-Educator", "P-33 Missile Pistol", "P/40-K Bolt Pistol", "P-34 Breacher" ] }
+    ] },
+
+    grenade: { label: "Grenade", all: "All grenades", groups: [
+      { name: "Explosive", items: [
+        "G-12 High Explosive", "G-6 Frag", "G-7 Pineapple", "G-16 Impact", "TED-63 Dynamite", "G-50 Seeker", "G-48 Giga Grenade" ] },
+      { name: "Incendiary", items: [
+        "G-10 Incendiary", "G-13 Incendiary Impact", "G-142 Pyrotech", "G-8 Immolation" ] },
+      { name: "Anti-armor", items: [
+        "G-123 Thermite", "G/40-K Melta Mine", "G-60 Anti-Tank Seeker", "G-109 Urchin" ] },
+      { name: "Utility and status", items: [
+        "G-3 Smoke", "G-89 Smokescreen", "G/SH-39 Shield", "G-23 Stun", "G-4 Gas", "G-31 Arc", "K-2 Throwing Knife", "TM-1 Lure Mine" ] }
+    ] },
+
+    booster: { label: "Booster", all: "All boosters", groups: [
+      { name: "Survival and movement", items: [
+        "Vitality Enhancement", "Stamina Enhancement", "Muscle Enhancement", "Dead Sprint",
+        "Experimental Infusion", "Motivational Shocks", "Integrated Extinguishers" ] },
+      { name: "Reinforcements and resupply", items: [
+        "Hellpod Space Optimization", "Increased Reinforcement Budget", "Flexible Reinforcement Budget",
+        "Armed Resupply Pods", "Surplus EAT Allocation" ] },
+      { name: "Hellpods and extraction", items: [
+        "Firebomb Hellpods", "Stun Pods", "Concealed Insertion", "Expert Extraction Pilot" ] },
+      { name: "Recon and samples", items: [
+        "UAV Recon Booster", "Localization Confusion", "Sample Extricator", "Sample Scanner" ] }
+    ] },
+
+    stratagem: { label: "Stratagem", all: "All stratagems", groups: [
+      { name: "Offensive", groups: [
+        { name: "Orbital strikes", items: [
+          "Orbital Precision Strike", "Orbital Gatling Barrage", "Orbital Gas Strike", "Orbital 120mm HE Barrage",
+          "Orbital Airburst Strike", "Orbital Smoke Strike", "Orbital EMS Strike", "Orbital 380mm HE Barrage",
+          "Orbital Walking Barrage", "Orbital Laser", "Orbital Napalm Barrage", "Orbital Railcannon Strike" ] },
+        { name: "Eagle strikes", items: [
+          ["Eagle Gas Airstrike", "campaign reward"], "Eagle Strafing Run", "Eagle Airstrike", "Eagle Cluster Bomb",
+          "Eagle Smoke Strike", "Eagle Napalm Airstrike", "Eagle 110mm Rocket Pods", "Eagle 500kg Bomb" ] }
+      ] },
+      { name: "Defensive", groups: [
+        { name: "Sentries", items: [
+          "A/MG-43 Machine Gun Sentry", "A/G-16 Gatling Sentry", "A/AC-8 Autocannon Sentry", "A/MLS-4X Rocket Sentry",
+          "A/M-12 Mortar Sentry", "A/M-23 EMS Mortar Sentry", "A/FLAM-40 Flame Sentry", "A/LAS-98 Laser Sentry",
+          "A/GM-17 Gas Mortar Sentry", "A/ARC-3 Tesla Tower" ] },
+        { name: "Emplacements", items: [
+          "E/MG-101 HMG Emplacement", "E/AT-12 Anti-Tank Emplacement", "E/GL-21 Grenadier Emplacement", "FX-12 Shield Generator Relay" ] },
+        { name: "Mines", items: [
+          "MD-6 Anti-Personnel Minefield", "MD-I4 Incendiary Mines", "MD-17 Anti-Tank Mines", "MD-8 Gas Mines" ] }
+      ] },
+      { name: "Support", groups: [
+        { name: "Support weapons", items: [
+          "MG-43 Machine Gun", "EAT-17 Expendable Anti-Tank", "M-105 Stalwart", "LAS-98 Laser Cannon", "APW-1 Anti-Materiel Rifle",
+          "GR-8 Recoilless Rifle", "GL-21 Grenade Launcher", "FLAM-40 Flamethrower", "MG-206 Heavy Machine Gun", "AC-8 Autocannon",
+          "ARC-3 Arc Thrower", "LAS-99 Quasar Cannon", "RL-77 Airburst Rocket Launcher", "MLS-4X Commando", "FAF-14 Spear",
+          "RS-422 Railgun", "StA-X3 W.A.S.P. Launcher", "CQC-20 Breaching Hammer", "PLAS-45 Epoch", "MGX-42 Bullet Storm",
+          "S-11 Speargun", "CQC-9 Defoliation Tool", "GL-52 De-Escalator", "EAT-700 Expendable Napalm", "TX-41 Sterilizer",
+          "EAT-411 Leveller", "GL-28 Belt-Fed Grenade Launcher", "B/MD C4 Pack", "MS-11 Solo Silo", "B/FLAM-80 Cremator",
+          "M-1000 Maxigun", "CQC-1 One True Flag", "40-K Meltagun" ] },
+        { name: "Backpacks", items: [
+          "B-1 Supply Pack", "LIFT-850 Jump Pack", "SH-20 Ballistic Shield Backpack", "AX/AR-23 Guard Dog", "AX/LAS-5 Rover",
+          "SH-32 Shield Generator Pack", "SH-51 Directional Shield", "AX/FLAM-75 Hot Dog", "B-100 Portable Hellbomb",
+          "AX/ARC-3 K-9", "LIFT-860 Hover Pack", "AX/TX-13 Dog Breath", "LIFT-182 Warp Pack" ] },
+        { name: "Vehicles", items: [
+          "M-102 Gunner FRV", ["M-103 Supply FRV", "campaign reward"], ["M-104 Incinerator FRV", "campaign reward"],
+          "EXO-45 Patriot Exosuit", "EXO-49 Emancipator Exosuit", "EXO-51 Lumberer Exosuit", "EXO-55 Breakthrough Exosuit",
+          ["TD-110 Maelstrom", "campaign reward"], "TD-220 Bastion MK XVI" ] }
+      ] }
+    ] }
+  };
+
+  var SLOTS = [
+    { id: "primary",   label: "Primary weapon",   cat: "primary" },
+    { id: "secondary", label: "Secondary weapon", cat: "secondary" },
+    { id: "grenade",   label: "Grenade",          cat: "grenade" },
+    { id: "booster",   label: "Booster",          cat: "booster" },
+    { id: "strat1",    label: "Stratagem 1",      cat: "stratagem" },
+    { id: "strat2",    label: "Stratagem 2",      cat: "stratagem" },
+    { id: "strat3",    label: "Stratagem 3",      cat: "stratagem" },
+    { id: "strat4",    label: "Stratagem 4",      cat: "stratagem" }
+  ];
+
+  /* ---------------- setup ---------------- */
+  var TAU = Math.PI * 2;
+  var MAX_WHEEL = 18;            // most segments drawn on the wheel at once
+  var LS_KEY = "hd2-loadout-roulette-v1";
+
+  var SLOT_BY_ID = {};
+  SLOTS.forEach(function (s) { SLOT_BY_ID[s.id] = s; });
+  var CATS = ["primary", "secondary", "grenade", "booster", "stratagem"];
+
+  function norm(x) { return typeof x === "string" ? { name: x, note: "" } : { name: x[0], note: x[1] || "" }; }
+
+  var ROOT = {}, ALL = {}, PATHMAP = {}, NOTES = {};
+  function annotate(cat, node, path, depth) {
+    node.path = path;
+    node.depth = depth;
+    node.itemsN = (node.items || []).map(norm);
+    node.kids = node.groups || [];
+    PATHMAP[cat][path] = node;
+    node.kids.forEach(function (g, i) { annotate(cat, g, path + "." + i, depth + 1); });
+    node.leafNames = node.itemsN.map(function (i) { return i.name; });
+    node.kids.forEach(function (g) { node.leafNames = node.leafNames.concat(g.leafNames); });
+    node.leafItems = node.itemsN.slice();
+    node.kids.forEach(function (g) { node.leafItems = node.leafItems.concat(g.leafItems); });
+  }
+  CATS.forEach(function (cat) {
+    PATHMAP[cat] = {};
+    ROOT[cat] = DATA[cat];
+    ROOT[cat].name = DATA[cat].all;
+    annotate(cat, ROOT[cat], "r", 0);
+    ALL[cat] = ROOT[cat].leafItems;
+    NOTES[cat] = {};
+    ALL[cat].forEach(function (i) { NOTES[cat][i.name] = i.note; });
+  });
+
+  var state = { sel: {}, picks: {}, locks: {}, target: "primary", sound: false, busy: false,
+                squad: 1, active: 0, unique: false, skip: false, divers: [] };
+  for (var dv = 0; dv < 4; dv++) state.divers.push({ picks: {}, locks: {} });
+  state.picks = state.divers[0].picks;
+  state.locks = state.divers[0].locks;
+  CATS.forEach(function (c) { state.sel[c] = new Set(ALL[c].map(function (i) { return i.name; })); });
+
+  /* ---------------- helpers ---------------- */
+  function $(sel) { return document.querySelector(sel); }
+  function el(tag, cls, text) {
+    var e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (text != null) e.textContent = text;
+    return e;
+  }
+  function rnd() {
+    try { var a = new Uint32Array(1); crypto.getRandomValues(a); return a[0] / 4294967296; }
+    catch (e) { return Math.random(); }
+  }
+  function pickIndex(n) { return Math.floor(rnd() * n); }
+  function shuffle(a) {
+    for (var i = a.length - 1; i > 0; i--) { var j = pickIndex(i + 1); var t = a[i]; a[i] = a[j]; a[j] = t; }
+    return a;
+  }
+  function sleep(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
+  function reduceMotion() { return window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches; }
+  function mod(a, n) { return ((a % n) + n) % n; }
+
+  var toastTimer;
+  function toast(msg) {
+    var t = $("#toast");
+    t.textContent = msg;
+    t.classList.add("show");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { t.classList.remove("show"); }, 2600);
+  }
+
+  /* ---------------- persistence ---------------- */
+  function save() {
+    try {
+      var off = {};
+      CATS.forEach(function (c) {
+        off[c] = ALL[c].map(function (i) { return i.name; }).filter(function (n) { return !state.sel[c].has(n); });
+      });
+      localStorage.setItem(LS_KEY, JSON.stringify({ off: off, sound: state.sound, squad: state.squad, unique: state.unique }));
+    } catch (e) { /* storage unavailable, that's fine */ }
+  }
+  function load() {
+    try {
+      var raw = localStorage.getItem(LS_KEY);
+      if (!raw) return;
+      var data = JSON.parse(raw);
+      if (data && data.off) {
+        CATS.forEach(function (c) {
+          (data.off[c] || []).forEach(function (n) { state.sel[c].delete(n); });
+        });
+      }
+      state.sound = !!(data && data.sound);
+      var sq = data && data.squad;
+      state.squad = (sq >= 1 && sq <= 4) ? sq : 1;
+      state.unique = !!(data && data.unique);
+    } catch (e) { /* ignore corrupt data */ }
+  }
+
+  /* ---------------- pools ---------------- */
+  function buildPool(slotId) {
+    var slot = SLOT_BY_ID[slotId];
+    var names = ALL[slot.cat].map(function (i) { return i.name; }).filter(function (n) { return state.sel[slot.cat].has(n); });
+    if (slot.cat === "stratagem") {
+      var taken = {};
+      SLOTS.forEach(function (s) {
+        if (s.cat === "stratagem" && s.id !== slotId && state.picks[s.id]) taken[state.picks[s.id]] = true;
+      });
+      if (state.unique && state.squad > 1) {
+        state.divers.slice(0, state.squad).forEach(function (d, i) {
+          if (i === state.active) return;
+          SLOTS.forEach(function (s) { if (s.cat === "stratagem" && d.picks[s.id]) taken[d.picks[s.id]] = true; });
+        });
+      }
+      names = names.filter(function (n) { return !taken[n]; });
+    }
+    return names;
+  }
+
+  function collectFull(node, sel, out) {
+    if (node.leafNames.length && node.leafNames.every(function (n) { return sel.has(n); })) { out.push(node); return; }
+    node.kids.forEach(function (k) { collectFull(k, sel, out); });
+  }
+  function poolText(cat) {
+    var root = ROOT[cat], sel = state.sel[cat], total = ALL[cat].length, n = sel.size;
+    if (n === total) return DATA[cat].all;
+    if (n === 0) return "Nothing selected";
+    if (n === 1) return Array.from(sel)[0];
+    var out = [];
+    root.kids.forEach(function (k) { collectFull(k, sel, out); });
+    var covered = out.reduce(function (a, x) { return a + x.leafNames.length; }, 0);
+    if (covered === n && out.length <= 2) return out.map(function (x) { return x.name; }).join(" + ");
+    return n + " of " + total + " selected";
+  }
+
+  /* ---------------- wheel ---------------- */
+  var canvas = $("#wheel");
+  var wheel = { ctx: canvas.getContext("2d"), css: 0, dpr: 1, items: [], rot: 0, highlight: -1, total: 0 };
+  var C = {};
+
+  function refreshColors() {
+    var cs = getComputedStyle(document.documentElement);
+    ["bg", "panel", "ink", "muted", "accent", "alert", "rim",
+     "seg1", "seg1-ink", "seg2", "seg2-ink", "seg3", "seg3-ink", "f-display"].forEach(function (k) {
+      C[k] = cs.getPropertyValue("--" + k).trim();
+    });
+  }
+
+  function segTone(i, n) {
+    var k = i % 3;
+    if (i === n - 1 && k === 0 && n > 1) k = 1;
+    return k + 1;
+  }
+  function indexAt(rot, n) { return Math.floor(mod(-rot, TAU) / (TAU / n)); }
+
+  function fitFont(ctx, text, maxW, startPx) {
+    var px = startPx;
+    ctx.font = "700 " + px + "px " + C["f-display"];
+    var w = ctx.measureText(text).width;
+    if (w > maxW) {
+      px = Math.max(9, Math.floor(px * maxW / w));
+      ctx.font = "700 " + px + "px " + C["f-display"];
+      w = ctx.measureText(text).width;
+    }
+    if (w > maxW) {
+      var t = text;
+      while (t.length > 3 && ctx.measureText(t + "\u2026").width > maxW) t = t.slice(0, -1);
+      return t + "\u2026";
+    }
+    return text;
+  }
+
+  function draw() {
+    var size = wheel.css;
+    if (!size) return;
+    var ctx = wheel.ctx;
+    ctx.setTransform(wheel.dpr, 0, 0, wheel.dpr, 0, 0);
+    ctx.clearRect(0, 0, size, size);
+
+    var cx = size / 2, cy = size / 2;
+    var outer = size / 2 - 2;
+    var rimW = Math.max(12, size * 0.04);
+    var R = outer - rimW;
+    var items = wheel.items, n = items.length;
+
+    ctx.beginPath();
+    ctx.arc(cx, cy, outer - rimW / 2, 0, TAU);
+    ctx.lineWidth = rimW;
+    ctx.strokeStyle = C.rim;
+    ctx.stroke();
+
+    if (!n) {
+      ctx.beginPath(); ctx.arc(cx, cy, R, 0, TAU);
+      ctx.fillStyle = C.panel; ctx.fill();
+      ctx.setLineDash([8, 8]); ctx.lineWidth = 2; ctx.strokeStyle = C.muted; ctx.stroke(); ctx.setLineDash([]);
+      ctx.fillStyle = C.ink; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      ctx.font = "800 " + Math.round(size * 0.06) + "px " + C["f-display"];
+      ctx.fillText("Nothing in this pool", cx, cy - size * 0.03);
+      ctx.fillStyle = C.muted;
+      ctx.font = "400 " + Math.round(size * 0.032) + "px sans-serif";
+      ctx.fillText("Open the pool menu and tick something", cx, cy + size * 0.04);
+      return;
+    }
+
+    var seg = TAU / n;
+    var pad = R * 0.055;
+    var hubR = R * 0.13;
+    var maxW = R - hubR - pad * 1.6;
+
+    for (var i = 0; i < n; i++) {
+      var a0 = -Math.PI / 2 + wheel.rot + i * seg, a1 = a0 + seg, mid = a0 + seg / 2;
+      var tone = segTone(i, n);
+
+      ctx.beginPath(); ctx.moveTo(cx, cy); ctx.arc(cx, cy, R, a0, a1); ctx.closePath();
+      ctx.fillStyle = C["seg" + tone]; ctx.fill();
+      ctx.lineWidth = 1.5; ctx.strokeStyle = C.bg; ctx.stroke();
+
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.rotate(mid);
+      var flip = Math.cos(mid) < 0;
+      var x;
+      if (flip) { ctx.rotate(Math.PI); ctx.textAlign = "left"; x = -(R - pad); }
+      else { ctx.textAlign = "right"; x = R - pad; }
+      ctx.textBaseline = "middle";
+      ctx.fillStyle = C["seg" + tone + "-ink"];
+      var startPx = Math.min(28, Math.max(11, seg * R * 0.62 * 0.5));
+      var label = fitFont(ctx, items[i], maxW, startPx);
+      ctx.fillText(label, x, 0);
+      ctx.restore();
+
+      if (wheel.highlight >= 0 && i !== wheel.highlight) {
+        ctx.beginPath(); ctx.moveTo(cx, cy); ctx.arc(cx, cy, R, a0, a1); ctx.closePath();
+        ctx.globalAlpha = 0.58; ctx.fillStyle = C.bg; ctx.fill(); ctx.globalAlpha = 1;
+      }
+    }
+
+    if (wheel.highlight >= 0) {
+      var h0 = -Math.PI / 2 + wheel.rot + wheel.highlight * seg;
+      ctx.beginPath(); ctx.moveTo(cx, cy); ctx.arc(cx, cy, R - 3, h0 + 0.01, h0 + seg - 0.01); ctx.closePath();
+      ctx.lineJoin = "round"; ctx.lineWidth = 5; ctx.strokeStyle = C.alert; ctx.stroke();
+    }
+
+    // rim lamps
+    for (var k = 0; k < n; k++) {
+      var ang = -Math.PI / 2 + wheel.rot + k * seg;
+      ctx.beginPath();
+      ctx.arc(cx + (outer - rimW / 2) * Math.cos(ang), cy + (outer - rimW / 2) * Math.sin(ang), rimW * 0.2, 0, TAU);
+      ctx.fillStyle = C.accent; ctx.fill();
+    }
+
+    // hub
+    ctx.beginPath(); ctx.arc(cx, cy, hubR, 0, TAU);
+    ctx.fillStyle = C.rim; ctx.fill();
+    ctx.lineWidth = 3; ctx.strokeStyle = C.accent; ctx.stroke();
+    ctx.beginPath(); ctx.arc(cx, cy, hubR * 0.32, 0, TAU);
+    ctx.fillStyle = C.accent; ctx.fill();
+  }
+
+  function resizeWheel() {
+    var wrap = $("#wheelWrap");
+    var w = wrap.clientWidth;
+    if (!w) return;
+    wheel.css = w;
+    wheel.dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+    canvas.width = Math.round(w * wheel.dpr);
+    canvas.height = Math.round(w * wheel.dpr);
+    draw();
+  }
+
+  function sample(pool, count, mustInclude) {
+    var rest = pool.filter(function (n) { return n !== mustInclude; });
+    shuffle(rest);
+    var out = rest.slice(0, mustInclude ? count - 1 : count);
+    if (mustInclude) out.push(mustInclude);
+    return shuffle(out);
+  }
+
+  function previewWheel() {
+    var pool = buildPool(state.target);
+    wheel.total = pool.length;
+    wheel.items = pool.length > MAX_WHEEL ? sample(pool, MAX_WHEEL) : pool.slice();
+    wheel.highlight = -1;
+    draw();
+  }
+
+  /* ---------------- sound ---------------- */
+  var ac, lastTick = 0;
+  function beep(freq, dur, vol, type) {
+    if (!state.sound) return;
+    try {
+      ac = ac || new (window.AudioContext || window.webkitAudioContext)();
+      var o = ac.createOscillator(), g = ac.createGain();
+      o.type = type || "square"; o.frequency.value = freq;
+      g.gain.setValueAtTime(vol, ac.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.0001, ac.currentTime + dur);
+      o.connect(g); g.connect(ac.destination);
+      o.start(); o.stop(ac.currentTime + dur + 0.01);
+    } catch (e) { /* audio unavailable */ }
+  }
+  function tick() {
+    var now = performance.now();
+    if (now - lastTick < 45) return;
+    lastTick = now;
+    beep(880, 0.035, 0.04, "square");
+    var p = $("#pointer");
+    if (p.animate && !reduceMotion()) {
+      p.animate([{ transform: "translateX(-50%) rotate(-16deg)" }, { transform: "translateX(-50%) rotate(0deg)" }], { duration: 110, easing: "ease-out" });
+    }
+  }
+  function chime() { beep(660, 0.14, 0.06, "triangle"); setTimeout(function () { beep(990, 0.28, 0.06, "triangle"); }, 120); }
+
+  /* ---------------- readout ---------------- */
+  var rLabel = $("#rLabel"), rName = $("#rName"), rNote = $("#rNote");
+
+  function poolInfo(slotId) {
+    var pool = buildPool(slotId);
+    if (!pool.length) return "Nothing is selected in this pool. Open the pool menu and tick something.";
+    var s = pool.length + (pool.length === 1 ? " possible result" : " possible results");
+    if (pool.length > MAX_WHEEL) s += ". The wheel shows " + MAX_WHEEL + " of them, but every one has an equal chance.";
+    return s;
+  }
+  function idleReadout() {
+    var s = SLOT_BY_ID[state.target];
+    rLabel.textContent = slotLabel(s);
+    var pick = state.picks[s.id];
+    rName.textContent = pick || "Ready to spin";
+    var note = pick ? NOTES[s.cat][pick] : "";
+    rNote.textContent = [note ? note.charAt(0).toUpperCase() + note.slice(1) : "", poolInfo(s.id)].filter(Boolean).join(". ");
+  }
+
+  /* ---------------- slots UI ---------------- */
+  var slotEls = {}, poolBtns = {}, panels = {}, expanded = {};
+  var openCat = null;
+
+  function updateSlot(id) {
+    var r = slotEls[id];
+    var pick = state.picks[id];
+    r.pick.textContent = pick || "Not picked yet";
+    r.pick.classList.toggle("empty", !pick);
+    var locked = !!state.locks[id];
+    r.lock.setAttribute("aria-pressed", String(locked));
+    r.lock.textContent = locked ? "Locked" : "Lock";
+    r.li.dataset.current = String(id === state.target);
+    updateSummary();
+  }
+  function updateAllSlots() { SLOTS.forEach(function (s) { updateSlot(s.id); }); }
+
+  function updateSpinLabels() {
+    var s = SLOT_BY_ID[state.target];
+    $("#spinOne").textContent = "Spin " + s.label.toLowerCase();
+    var anyLocked = SLOTS.some(function (x) { return state.locks[x.id]; });
+    $("#spinAll").textContent = anyLocked ? "Spin unlocked slots" : (state.squad > 1 ? "Spin this diver" : "Spin full loadout");
+    $("#spinSquad").hidden = state.squad < 2;
+  }
+
+  function setTarget(id) {
+    state.target = id;
+    updateAllSlots();
+    updateSpinLabels();
+    if (!state.busy) { previewWheel(); idleReadout(); }
+  }
+
+  function slotLabel(sl) { return state.squad > 1 ? "Diver " + (state.active + 1) + ": " + sl.label : sl.label; }
+
+  function updateSummary() {
+    var box = $("#summary");
+    if (state.squad < 2) { box.hidden = true; return; }
+    box.hidden = false;
+    box.textContent = "";
+    for (var d = 0; d < state.squad; d++) {
+      var dv = state.divers[d];
+      var card = el("article", "card");
+      card.dataset.active = String(d === state.active);
+      card.appendChild(el("h4", null, "Diver " + (d + 1)));
+      var ul = el("ul");
+      SLOTS.forEach(function (sl) {
+        var li = el("li");
+        li.appendChild(el("span", "k", sl.label.replace(" weapon", "").replace(/ \d$/, "") + ": "));
+        li.appendChild(el("span", dv.picks[sl.id] ? null : "none", dv.picks[sl.id] || "not picked"));
+        ul.appendChild(li);
+      });
+      card.appendChild(ul);
+      box.appendChild(card);
+    }
+  }
+
+  function updateSquadUI() {
+    document.querySelectorAll("#squadSeg button").forEach(function (b) {
+      b.setAttribute("aria-pressed", String(+b.dataset.n === state.squad));
+    });
+    var tabs = $("#diverTabs");
+    tabs.hidden = state.squad < 2;
+    if (tabs.children.length !== (state.squad < 2 ? 0 : state.squad)) {
+      tabs.textContent = "";
+      if (state.squad > 1) {
+        for (var d = 0; d < state.squad; d++) {
+          (function (i) {
+            var b = el("button", null, "Diver " + (i + 1));
+            b.type = "button";
+            b.disabled = state.busy;
+            b.addEventListener("click", function () { if (!state.busy) setActive(i); });
+            tabs.appendChild(b);
+          })(d);
+        }
+      }
+    }
+    Array.prototype.forEach.call(tabs.children, function (b, i) { b.setAttribute("aria-pressed", String(i === state.active)); });
+    $("#uniqueOpt").hidden = state.squad < 2;
+    updateSummary();
+  }
+
+  function setActive(i) {
+    state.active = i;
+    state.picks = state.divers[i].picks;
+    state.locks = state.divers[i].locks;
+    updateAllSlots();
+    updateSpinLabels();
+    updateSquadUI();
+    if (!state.busy) { previewWheel(); idleReadout(); }
+  }
+
+  function setSquad(n) {
+    state.squad = n;
+    save();
+    if (state.active >= n) { setActive(0); return; }
+    updateSquadUI();
+    updateSpinLabels();
+    if (!state.busy) { previewWheel(); idleReadout(); }
+  }
+
+  function setBusy(b) {
+    state.busy = b;
+    if (b) state.skip = false;
+    $("#spinOne").disabled = b;
+    $("#spinAll").disabled = b;
+    $("#spinSquad").disabled = b;
+    $("#skip").hidden = !b;
+    document.querySelectorAll("#squadSeg button, #diverTabs button, #unique").forEach(function (x) { x.disabled = b; });
+    document.querySelectorAll(".js-spin").forEach(function (x) { x.disabled = b; });
+  }
+
+  function chevronSvg(path) {
+    return '<svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="' + path + '" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  }
+
+  function makePool(cat, host) {
+    host.classList.add("pool");
+    var btn = el("button", "pool-btn");
+    btn.type = "button";
+    btn.setAttribute("aria-expanded", "false");
+    btn.setAttribute("aria-controls", "panel-" + cat);
+    btn.dataset.cat = cat;
+    btn.innerHTML = '<span class="pool-k">Pool</span><span class="pool-v"></span>' + chevronSvg("M2.5 4.5l3.5 3.5 3.5-3.5");
+    host.appendChild(btn);
+    poolBtns[cat] = btn;
+    btn.addEventListener("click", function () { togglePool(cat); });
+    updatePoolLabel(cat);
+    return btn;
+  }
+  function updatePoolLabel(cat) { poolBtns[cat].querySelector(".pool-v").textContent = poolText(cat); }
+
+  function buildSlots() {
+    var gear = $("#gearSlots"), strat = $("#stratSlots");
+    SLOTS.forEach(function (s) {
+      var li = el("li", "slot");
+      li.dataset.slot = s.id;
+
+      var main = el("button", "slot-main");
+      main.type = "button";
+      var lab = el("span", "slot-label", s.label);
+      var pick = el("span", "slot-pick");
+      main.appendChild(lab); main.appendChild(pick);
+      main.addEventListener("click", function () { if (!state.busy) setTarget(s.id); });
+
+      var actions = el("div", "slot-actions");
+      var spin = el("button", "mini js-spin", "Spin");
+      spin.type = "button";
+      spin.setAttribute("aria-label", "Spin " + s.label.toLowerCase());
+      spin.addEventListener("click", function () {
+        if (state.busy) return;
+        setTarget(s.id);
+        var rect = $("#wheelWrap").getBoundingClientRect();
+        if (rect.top < 0 || rect.bottom > window.innerHeight) {
+          $("#wheelWrap").scrollIntoView({ behavior: reduceMotion() ? "auto" : "smooth", block: "center" });
+        }
+        spinOne(s.id);
+      });
+      var lock = el("button", "mini", "Lock");
+      lock.type = "button";
+      lock.setAttribute("aria-pressed", "false");
+      lock.setAttribute("aria-label", "Lock " + s.label.toLowerCase());
+      lock.addEventListener("click", function () {
+        state.locks[s.id] = !state.locks[s.id];
+        updateSlot(s.id);
+        updateSpinLabels();
+      });
+      actions.appendChild(spin); actions.appendChild(lock);
+
+      li.appendChild(main); li.appendChild(actions);
+      slotEls[s.id] = { li: li, pick: pick, lock: lock };
+
+      if (s.cat === "stratagem") {
+        strat.appendChild(li);
+      } else {
+        var host = el("div");
+        li.appendChild(host);
+        makePool(s.cat, host);
+        gear.appendChild(li);
+      }
+    });
+    makePool("stratagem", $("#stratPoolHost"));
+    updateAllSlots();
+  }
+
+  /* ---------------- pool panels ---------------- */
+  function buildPanel(cat) {
+    var panel = el("div", "panel");
+    panel.id = "panel-" + cat;
+    panel.hidden = true;
+    panel.setAttribute("role", "group");
+    panel.setAttribute("aria-label", "Choose which " + DATA[cat].label.toLowerCase() + " items can come up");
+
+    var head = el("div", "panel-head");
+    head.appendChild(el("span", null, "Allowed in this pool"));
+    var btns = el("div");
+    var all = el("button", "mini", "Select all"); all.type = "button"; all.dataset.act = "all";
+    var none = el("button", "mini", "Clear"); none.type = "button"; none.dataset.act = "none";
+    btns.appendChild(all); btns.appendChild(none);
+    head.appendChild(btns);
+    panel.appendChild(head);
+
+    expanded[cat] = {};
+    Object.keys(PATHMAP[cat]).forEach(function (p) {
+      var n = PATHMAP[cat][p];
+      if (n.depth >= 1 && n.kids.length) expanded[cat][p] = true;
+    });
+
+    var tree = el("div", "tree");
+    tree.appendChild(nodeRow(cat, ROOT[cat], true));
+    panel.appendChild(tree);
+
+    panel.addEventListener("change", function (e) {
+      var t = e.target;
+      if (!(t instanceof HTMLInputElement)) return;
+      var sel = state.sel[cat];
+      if (t.dataset.path !== undefined) {
+        var node = PATHMAP[cat][t.dataset.path];
+        node.leafNames.forEach(function (n) { if (t.checked) sel.add(n); else sel.delete(n); });
+      } else if (t.dataset.item !== undefined) {
+        if (t.checked) sel.add(t.dataset.item); else sel.delete(t.dataset.item);
+      }
+      afterPoolChange(cat);
+    });
+    panel.addEventListener("click", function (e) {
+      var chev = e.target.closest(".chev");
+      if (chev) {
+        var open = chev.getAttribute("aria-expanded") !== "true";
+        chev.setAttribute("aria-expanded", String(open));
+        chev.parentNode.nextElementSibling.hidden = !open;
+        expanded[cat][chev.dataset.path] = open;
+        return;
+      }
+      var act = e.target.closest("[data-act]");
+      if (act) {
+        var sel = state.sel[cat];
+        if (act.dataset.act === "all") ALL[cat].forEach(function (i) { sel.add(i.name); });
+        else sel.clear();
+        afterPoolChange(cat);
+      }
+    });
+    return panel;
+  }
+
+  function nodeRow(cat, node, isRoot) {
+    var wrap = el("div", "node");
+    var row = el("div", "node-row");
+    row.style.setProperty("--d", String(isRoot ? 0 : node.depth - 1));
+
+    var hasKids = node.kids.length || node.itemsN.length;
+    if (isRoot || !hasKids) {
+      row.appendChild(el("span", "chev-spacer"));
+    } else {
+      var chev = el("button", "chev");
+      chev.type = "button";
+      chev.dataset.path = node.path;
+      chev.setAttribute("aria-label", "Show or hide " + node.name);
+      chev.setAttribute("aria-expanded", String(!!expanded[cat][node.path]));
+      chev.innerHTML = chevronSvg("M4.5 2.5l3.5 3.5-3.5 3.5");
+      row.appendChild(chev);
+    }
+    var label = el("label");
+    var input = el("input");
+    input.type = "checkbox";
+    input.dataset.path = node.path;
+    label.appendChild(input);
+    label.appendChild(el("span", null, node.name));
+    row.appendChild(label);
+    row.appendChild(el("span", "count"));
+    wrap.appendChild(row);
+
+    if (hasKids) {
+      var children = el("div", "children");
+      children.hidden = !isRoot && !expanded[cat][node.path];
+      node.kids.forEach(function (k) { children.appendChild(nodeRow(cat, k, false)); });
+      node.itemsN.forEach(function (it) {
+        var ir = el("div", "item-row");
+        ir.style.setProperty("--d", String(node.depth));
+        var lab = el("label");
+        var cb = el("input");
+        cb.type = "checkbox";
+        cb.dataset.item = it.name;
+        lab.appendChild(cb);
+        lab.appendChild(el("span", null, it.name));
+        if (it.note) lab.appendChild(el("span", "chip", it.note));
+        ir.appendChild(el("span", "chev-spacer"));
+        ir.appendChild(lab);
+        children.appendChild(ir);
+      });
+      wrap.appendChild(children);
+    }
+    return wrap;
+  }
+
+  function syncPanel(cat) {
+    var panel = panels[cat];
+    if (!panel) return;
+    var sel = state.sel[cat];
+    panel.querySelectorAll("input[data-path]").forEach(function (inp) {
+      var node = PATHMAP[cat][inp.dataset.path];
+      var c = 0;
+      node.leafNames.forEach(function (n) { if (sel.has(n)) c++; });
+      inp.checked = c === node.leafNames.length && c > 0;
+      inp.indeterminate = c > 0 && c < node.leafNames.length;
+      var cnt = inp.closest(".node-row").querySelector(".count");
+      cnt.textContent = c + "/" + node.leafNames.length;
+    });
+    panel.querySelectorAll("input[data-item]").forEach(function (inp) {
+      inp.checked = sel.has(inp.dataset.item);
+    });
+  }
+
+  function afterPoolChange(cat) {
+    syncPanel(cat);
+    updatePoolLabel(cat);
+    save();
+    if (SLOT_BY_ID[state.target].cat === cat && !state.busy) { previewWheel(); idleReadout(); }
+  }
+
+  function closePool(returnFocus) {
+    if (!openCat) return;
+    var cat = openCat;
+    panels[cat].hidden = true;
+    poolBtns[cat].setAttribute("aria-expanded", "false");
+    if (returnFocus) poolBtns[cat].focus();
+    openCat = null;
+  }
+  function togglePool(cat) {
+    if (openCat === cat) { closePool(false); return; }
+    closePool(false);
+    if (!panels[cat]) {
+      panels[cat] = buildPanel(cat);
+      poolBtns[cat].parentNode.appendChild(panels[cat]);
+    }
+    syncPanel(cat);
+    panels[cat].hidden = false;
+    poolBtns[cat].setAttribute("aria-expanded", "true");
+    openCat = cat;
+    var first = panels[cat].querySelector("input");
+    if (first) first.focus({ preventScroll: true });
+    panels[cat].scrollIntoView({ block: "nearest", behavior: "auto" });
+  }
+  document.addEventListener("pointerdown", function (e) {
+    if (!openCat) return;
+    var host = poolBtns[openCat].parentNode;
+    if (!host.contains(e.target)) closePool(false);
+  });
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape" && openCat) { e.preventDefault(); closePool(true); }
+  });
+
+  /* ---------------- spinning ---------------- */
+  function animateSpin(start, total, dur) {
+    return new Promise(function (resolve) {
+      var t0 = performance.now();
+      var last = -1;
+      var n = wheel.items.length;
+      function frame(now) {
+        var t = Math.min(1, (now - t0) / dur);
+        var e = 1 - Math.pow(1 - t, 4);
+        wheel.rot = start + total * e;
+        var idx = indexAt(wheel.rot, n);
+        if (idx !== last) {
+          last = idx;
+          rName.textContent = wheel.items[idx];
+          if (t < 1) tick();
+        }
+        draw();
+        if (t < 1) requestAnimationFrame(frame); else resolve();
+      }
+      requestAnimationFrame(frame);
+    });
+  }
+
+  async function spinSlot(id, fast) {
+    var slot = SLOT_BY_ID[id];
+    if (state.target !== id) { state.target = id; updateAllSlots(); updateSpinLabels(); }
+    var pool = buildPool(id);
+    if (!pool.length) {
+      previewWheel(); idleReadout();
+      toast("Nothing to pick from for " + slot.label.toLowerCase() + ". Open its pool menu and tick some items.");
+      return false;
+    }
+
+    var winner = pool[pickIndex(pool.length)];
+    wheel.total = pool.length;
+    wheel.items = pool.length > MAX_WHEEL ? sample(pool, MAX_WHEEL, winner) : pool.slice();
+    wheel.highlight = -1;
+
+    var n = wheel.items.length;
+    var w = wheel.items.indexOf(winner);
+    var seg = TAU / n;
+    var a = (w + 0.5 + (rnd() - 0.5) * 0.76) * seg;     // spot on the wheel that should end up under the pointer
+    var base = mod(-a, TAU);
+    var start = mod(wheel.rot, TAU);
+    var delta = mod(base - start, TAU);
+    var quick = reduceMotion();
+    var turns = quick ? 0 : (fast === "turbo" ? 2 : (fast ? 3 : 5)) + Math.floor(rnd() * 3);
+    var dur = quick ? 450 : (fast === "turbo" ? 650 + rnd() * 150 : (fast ? 1900 + rnd() * 300 : 4300 + rnd() * 900));
+
+    rLabel.textContent = slotLabel(slot);
+    rNote.textContent = "";
+    if (!state.skip) await animateSpin(start, delta + turns * TAU, dur);
+
+    wheel.rot = mod(start + delta, TAU);
+    wheel.highlight = w;
+    draw();
+
+    state.picks[id] = winner;
+    updateSlot(id);
+    rName.textContent = winner;
+    var note = NOTES[slot.cat][winner];
+    rNote.textContent = note ? note.charAt(0).toUpperCase() + note.slice(1) : "Requisitioned";
+    $("#live").textContent = slotLabel(slot) + ": " + winner;
+    if (!state.skip) chime();
+    return true;
+  }
+
+  async function spinOne(id) {
+    if (state.busy) return;
+    setBusy(true);
+    try { await spinSlot(id, false); } finally { setBusy(false); }
+  }
+
+  async function spinDiver(speed) {
+    var open = SLOTS.filter(function (x) { return !state.locks[x.id]; });
+    if (!open.length) return false;
+    open.forEach(function (x) { state.picks[x.id] = null; updateSlot(x.id); });
+    for (var i = 0; i < open.length; i++) {
+      await spinSlot(open[i].id, speed);
+      if (!state.skip) await sleep(reduceMotion() ? 80 : (speed === "turbo" ? 120 : 420));
+    }
+    return true;
+  }
+
+  async function spinAll() {
+    if (state.busy) return;
+    if (!SLOTS.some(function (x) { return !state.locks[x.id]; })) { toast("Every slot is locked. Unlock one to spin."); return; }
+    setBusy(true);
+    try {
+      await spinDiver(true);
+      rLabel.textContent = state.squad > 1 ? "Diver " + (state.active + 1) + " is ready" : "Loadout complete";
+      rName.textContent = "Good luck, Helldiver.";
+      rNote.textContent = "Copy it, or lock the slots you like and spin the rest again.";
+    } finally { setBusy(false); }
+  }
+
+  async function spinSquad() {
+    if (state.busy) return;
+    var anyOpen = false;
+    for (var d = 0; d < state.squad; d++) {
+      SLOTS.forEach(function (x) { if (!state.divers[d].locks[x.id]) anyOpen = true; });
+    }
+    if (!anyOpen) { toast("Every slot is locked for every diver."); return; }
+    setBusy(true);
+    try {
+      // clear old picks first so "unique stratagems" never counts stale results
+      for (var c = 0; c < state.squad; c++) {
+        SLOTS.forEach(function (x) { if (!state.divers[c].locks[x.id]) state.divers[c].picks[x.id] = null; });
+      }
+      for (var i = 0; i < state.squad; i++) {
+        setActive(i);
+        await spinDiver("turbo");
+        if (!state.skip) await sleep(reduceMotion() ? 80 : 250);
+      }
+      setActive(0);
+      rLabel.textContent = "Squad complete";
+      rName.textContent = "Spread democracy.";
+      rNote.textContent = "Switch divers with the tabs. Lock what you like and spin again.";
+    } finally { setBusy(false); }
+  }
+
+  /* ---------------- copy ---------------- */
+  function loadoutText() {
+    function block(dv) {
+      function g(id) { return dv.picks[id] || "(not picked)"; }
+      return [
+        "Primary: " + g("primary"),
+        "Secondary: " + g("secondary"),
+        "Grenade: " + g("grenade"),
+        "Booster: " + g("booster"),
+        "Stratagems: " + ["strat1", "strat2", "strat3", "strat4"].map(g).join(" / ")
+      ].join("\n");
+    }
+    if (state.squad < 2) return block(state.divers[0]);
+    return state.divers.slice(0, state.squad).map(function (dv, i) { return "Diver " + (i + 1) + "\n" + block(dv); }).join("\n\n");
+  }
+  async function copyText(t) {
+    try { await navigator.clipboard.writeText(t); return true; }
+    catch (e) {
+      try {
+        var ta = document.createElement("textarea");
+        ta.value = t; ta.style.position = "fixed"; ta.style.opacity = "0";
+        document.body.appendChild(ta); ta.select();
+        var ok = document.execCommand("copy");
+        ta.remove();
+        return ok;
+      } catch (e2) { return false; }
+    }
+  }
+
+  /* ---------------- init ---------------- */
+  load();
+  buildSlots();
+  refreshColors();
+
+  [1, 2, 3, 4].forEach(function (n) {
+    var b = el("button", null, n === 1 ? "Solo" : String(n));
+    b.type = "button";
+    b.dataset.n = String(n);
+    b.setAttribute("aria-label", n === 1 ? "Solo" : "Squad of " + n);
+    b.addEventListener("click", function () { if (!state.busy) setSquad(n); });
+    $("#squadSeg").appendChild(b);
+  });
+  $("#unique").checked = state.unique;
+  $("#unique").addEventListener("change", function (e) {
+    state.unique = e.target.checked;
+    save();
+    if (!state.busy) { previewWheel(); idleReadout(); }
+  });
+  $("#spinSquad").addEventListener("click", spinSquad);
+  $("#skip").addEventListener("click", function () { state.skip = true; });
+  updateSquadUI();
+
+  var soundBtn = $("#sound");
+  function updateSound() {
+    soundBtn.setAttribute("aria-pressed", String(state.sound));
+    soundBtn.textContent = state.sound ? "Sound on" : "Sound off";
+  }
+  soundBtn.addEventListener("click", function () {
+    state.sound = !state.sound;
+    updateSound();
+    save();
+    if (state.sound) beep(660, 0.08, 0.05, "triangle");
+  });
+  updateSound();
+
+  $("#spinOne").addEventListener("click", function () { spinOne(state.target); });
+  $("#spinAll").addEventListener("click", spinAll);
+  $("#copy").addEventListener("click", async function () {
+    var ok = await copyText(loadoutText());
+    toast(ok ? "Loadout copied to your clipboard." : "Couldn't copy automatically. Select the text in the slots instead.");
+  });
+
+  if (window.ResizeObserver) new ResizeObserver(resizeWheel).observe($("#wheelWrap"));
+  else window.addEventListener("resize", resizeWheel);
+
+  function onTheme() { refreshColors(); draw(); }
+  if (window.matchMedia) {
+    var mq = window.matchMedia("(prefers-color-scheme: dark)");
+    if (mq.addEventListener) mq.addEventListener("change", onTheme);
+  }
+  new MutationObserver(onTheme).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(function () { refreshColors(); draw(); });
+
+  resizeWheel();
+  setTarget("primary");
+})();
+</script>
+</body>
+</html>
