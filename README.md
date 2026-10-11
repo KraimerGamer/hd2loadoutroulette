@@ -1,0 +1,1 @@
+The purpose of this project is to create a fun randomizer tool for Helldivers 2. The roulette wheel can spin your weapons, equipment, and stratagems to bring on each mission. It also can spin for a full squad. 
